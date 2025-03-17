@@ -1,0 +1,12 @@
+-   [ ] User service
+-   [ ] Product Catalog Service
+-   [ ] Shopping Cart Service
+-   [ ] Order Service
+-   [ ] Payment Service
+-   [ ] Notification Service
+-   [ ] Store front
+-   [ ] Docker & Docker Compose
+-   [ ] NGINX API gateway
+-   [ ] Service Discovery
+-   [ ] Centralized Logging
+-   [ ] CI/CD Pipeline
