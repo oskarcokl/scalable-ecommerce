@@ -1,0 +1,22 @@
+{
+    "name": "product-catalog-service",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "build": "npx tsc",
+        "watch": "npx tsc --watch",
+        "dev": "nodemon dist/index.js",
+        "dev:watch": "concurrently \"npm run watch\" \"npm run dev\"",
+        "test": "Not testing yet uwu",
+        "start": "node dist/index.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "devDependencies": {
+        "@types/express": "^5.0.0",
+        "@types/node": "^22.13.10",
+        "concurrently": "^9.1.2",
+        "nodemon": "^3.1.9"
+    }
+}
