@@ -6,6 +6,7 @@
 -   [ ] Notification Service
 -   [ ] Store front
 -   [ ] Docker & Docker Compose
+    -   [x] Docker Compose for postgresql and pgadmin
 -   [ ] NGINX API gateway
 -   [ ] Service Discovery
 -   [ ] Centralized Logging
