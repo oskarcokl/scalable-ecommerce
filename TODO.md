@@ -2,6 +2,35 @@
 
 -   [ ] User service
 -   [ ] Product Catalog Service
+    -   [ ] Store basic product details
+        -   name
+        -   description
+        -   SKU
+        -   price??
+        -   category
+        -   variants
+        -   product images and media
+    -   [ ] Product Search and Filtering
+        -   Search products by various criteria
+        -   Filtering by
+            -   categories
+            -   attributes
+            -   price ranges
+        -   Sorting
+            -   price
+            -   popularity
+            -   ratings
+    -   [ ] Pricing Management
+    -   [ ] Product metadata
+        -   Product attributes
+            -   material
+            -   size
+            -   sex
+        -   Product ratings and reviews
+        <!-- Maybe save SEO for later -->
+        -   SEO related data
+            -   meta titles
+            -   descriptions
 -   [ ] Shopping Cart Service
 -   [ ] Order Service
 -   [ ] Payment Service
