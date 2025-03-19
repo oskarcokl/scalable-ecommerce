@@ -42,3 +42,4 @@
 -   [ ] Service Discovery
 -   [ ] Centralized Logging
 -   [ ] CI/CD Pipeline
+-   [x] Migrate to drizzle

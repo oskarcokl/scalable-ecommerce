@@ -1,3 +1,7 @@
-import { testConnection } from './services/database';
+import db from './services/database';
+import './db/schema';
 
-testConnection();
+(async () => {
+    const res = await db.execute('select 1');
+    console.log(res);
+})();
