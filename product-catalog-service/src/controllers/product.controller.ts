@@ -34,6 +34,19 @@ export const createProduct = async (req: Request, res: Response) => {
         const result = await db.insert(products).values(parsedData);
         res.json(result);
     } catch (e) {
+        // TODO: Handle errors better
+        res.status(400).send(e);
+    }
+};
+
+export const updateProduct = async (req: Request, res: Response) => {
+    try {
+        const SKU = req.params.sku;
+        const parsedData = productSchema.parse(req.body);
+        const result = await db.update(products).set(parsedData).where(eq(products.SKU, SKU));
+        res.json(result);
+    } catch (e) {
+        // TODO: Handle errors better
         res.status(400).send(e);
     }
 };
