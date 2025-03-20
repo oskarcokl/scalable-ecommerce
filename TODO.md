@@ -2,7 +2,7 @@
 
 -   [ ] User service
 -   [ ] Product Catalog Service
-    -   [ ] Store basic product details
+    -   [x] Store basic product details
         -   name
         -   description
         -   SKU

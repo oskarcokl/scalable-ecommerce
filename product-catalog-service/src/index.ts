@@ -4,6 +4,8 @@ import routes from './routes';
 
 // Maybe the server should be a service? Or be inside the routes directory
 const app = express();
+// Middle ware to parse JSON bodies.
+app.use(express.json());
 // TODO: move to ENV variable, SERVER_PORT
 
 dotenv.config({
