@@ -2,26 +2,21 @@ import { Request, Response } from 'express';
 import db from '../services/database';
 import { products } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { z } from 'zod';
+import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 
-const productSchema = z.object({
-    name: z.string(),
-    description: z.string(),
-    categoryId: z.number().int().positive(),
-    price: z.number().positive(),
-    variantId: z.number().int().positive(),
-});
+const productInsertSchema = createInsertSchema(products);
+const productUpdateSchema = createUpdateSchema(products);
 
 export const getAllProducts = async (req: Request, res: Response) => {
     res.json(await db.select().from(products));
 };
 
-export const getProductBySKU = async (req: Request, res: Response) => {
-    const SKU = req.params.sku;
-    const result = await db.select().from(products).where(eq(products.SKU, SKU));
+export const getProductById = async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const result = await db.select().from(products).where(eq(products.productId, id));
     if (result.length === 0) {
         res.status(404).json({
-            message: `No product found with provided SKU: ${SKU}`,
+            message: `No product found with provided ID: ${id}`,
         });
     } else {
         res.json(result);
@@ -30,7 +25,7 @@ export const getProductBySKU = async (req: Request, res: Response) => {
 
 export const createProduct = async (req: Request, res: Response) => {
     try {
-        const parsedData = productSchema.parse(req.body);
+        const parsedData = productInsertSchema.parse(req.body);
         const result = await db.insert(products).values(parsedData);
         res.json(result);
     } catch (e) {
@@ -41,9 +36,9 @@ export const createProduct = async (req: Request, res: Response) => {
 
 export const updateProduct = async (req: Request, res: Response) => {
     try {
-        const SKU = req.params.sku;
-        const parsedData = productSchema.parse(req.body);
-        const result = await db.update(products).set(parsedData).where(eq(products.SKU, SKU));
+        const id = parseInt(req.params.id);
+        const parsedData = productUpdateSchema.parse(req.body);
+        const result = await db.update(products).set(parsedData).where(eq(products.productId, id));
         res.json(result);
     } catch (e) {
         // TODO: Handle errors better

@@ -1,5 +1,5 @@
 import db from './database';
-import { seed } from 'drizzle-seed';
+import { reset, seed } from 'drizzle-seed';
 import * as productSchema from '../db/schema';
 
 const clothingDescriptions = [
@@ -39,22 +39,36 @@ const clothingNames = [
 ];
 
 const main = async () => {
+    // Truncate the tables
+    await reset(db, productSchema);
+
+    // Seed with "random" data
     await seed(db, productSchema).refine((f) => ({
         products: {
             columns: {
                 categoryId: f.intPrimaryKey(),
-                variantId: f.intPrimaryKey(),
-                price: f.number({
-                    minValue: 5,
-                    maxValue: 50,
-                    isUnique: false,
-                    precision: 100,
-                }),
                 description: f.valuesFromArray({
                     values: clothingDescriptions,
                 }),
                 name: f.valuesFromArray({
                     values: clothingNames,
+                }),
+            },
+            count: 5,
+        },
+        productVariants: {
+            count: 40,
+            columns: {
+                color: f.valuesFromArray({
+                    values: ['blue', 'red', 'green', 'black', 'white'],
+                }),
+                price: f.number({
+                    minValue: 5,
+                    maxValue: 50,
+                    precision: 100,
+                }),
+                size: f.valuesFromArray({
+                    values: ['s', 'm', 'l', 'xl'],
                 }),
             },
         },
@@ -63,5 +77,12 @@ const main = async () => {
 };
 
 console.log('Start seeding');
-main();
-console.log('Done seeding');
+main()
+    .then(() => {
+        console.log('Done seeding');
+        process.exit(0);
+    })
+    .catch((e) => {
+        console.error('Something went wrong: ', e);
+        process.exit(1);
+    });
