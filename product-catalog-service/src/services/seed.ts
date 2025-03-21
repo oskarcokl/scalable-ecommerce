@@ -38,6 +38,24 @@ const clothingNames = [
     'Sleek Biker Jacket',
 ];
 
+const clothingCategories = [
+    'Tops',
+    'Bottoms',
+    'Dresses',
+    'Outerwear',
+    'Activewear',
+    'Footwear',
+    'Accessories',
+    'Swimwear',
+    'Sleepwear',
+    'Loungewear',
+    'Formalwear',
+    'Casualwear',
+    'Workwear',
+    'Undergarments',
+    'Seasonal Wear',
+];
+
 const main = async () => {
     // Truncate the tables
     await reset(db, productSchema);
@@ -69,6 +87,14 @@ const main = async () => {
                 }),
                 size: f.valuesFromArray({
                     values: ['s', 'm', 'l', 'xl'],
+                }),
+            },
+        },
+        categories: {
+            count: 20,
+            columns: {
+                name: f.valuesFromArray({
+                    values: clothingCategories,
                 }),
             },
         },

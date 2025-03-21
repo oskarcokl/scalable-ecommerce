@@ -1,3 +1,4 @@
+import { relations } from 'drizzle-orm';
 import { integer, pgTable, varchar, doublePrecision, pgEnum } from 'drizzle-orm/pg-core';
 
 /**
@@ -20,6 +21,7 @@ import { integer, pgTable, varchar, doublePrecision, pgEnum } from 'drizzle-orm/
  * - media
  *
  * All the other fields have to be associated with a SKU
+ *
  */
 
 export const products = pgTable('products', {
@@ -36,6 +38,30 @@ export const productMedia = pgTable('product_media', {
         .notNull(),
     link: varchar().notNull(),
 });
+
+/**
+ * Categories should have a name and an id and a parent id. Since sneakers are
+ * a sub category of shoes for example.
+ * - category_id
+ * - parent_category_id
+ * - name
+ */
+export const categories = pgTable('categories', {
+    categoryId: integer().primaryKey().notNull(),
+    parentCategoryId: integer(),
+    name: varchar().notNull(),
+});
+
+/**
+ * Establishes a one-to-one relationship to between a category and its parent
+ * For example shoe being a parent category of a sneaker.
+ */
+export const categoryRelations = relations(categories, ({ one }) => ({
+    parentCategory: one(categories, {
+        fields: [categories.parentCategoryId],
+        references: [categories.categoryId],
+    }),
+}));
 
 export const sexEnum = pgEnum('sex', ['male', 'female', 'unisex']);
 
