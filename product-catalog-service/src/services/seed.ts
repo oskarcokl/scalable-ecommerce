@@ -93,7 +93,7 @@ const main = async () => {
         categories: {
             count: 20,
             columns: {
-                name: f.valuesFromArray({
+                categoryName: f.valuesFromArray({
                     values: clothingCategories,
                 }),
             },

@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { integer, pgTable, varchar, doublePrecision, pgEnum } from 'drizzle-orm/pg-core';
+import { integer, pgTable, varchar, doublePrecision, pgEnum, serial } from 'drizzle-orm/pg-core';
 
 /**
  * I'm a bit lost as to what kind of information I need about products so I'm
@@ -25,14 +25,14 @@ import { integer, pgTable, varchar, doublePrecision, pgEnum } from 'drizzle-orm/
  */
 
 export const products = pgTable('products', {
-    productId: integer().primaryKey().notNull(),
+    productId: serial().primaryKey(),
     name: varchar().notNull(),
     description: varchar().notNull(),
     categoryId: integer().notNull(),
 });
 
 export const productMedia = pgTable('product_media', {
-    productMediaId: integer().primaryKey().generatedByDefaultAsIdentity(),
+    productMediaId: serial().primaryKey(),
     productId: integer()
         .references(() => products.productId)
         .notNull(),
@@ -47,9 +47,9 @@ export const productMedia = pgTable('product_media', {
  * - name
  */
 export const categories = pgTable('categories', {
-    categoryId: integer().primaryKey().notNull(),
+    categoryId: serial().primaryKey(),
     parentCategoryId: integer(),
-    name: varchar().notNull(),
+    categoryName: varchar().notNull(),
 });
 
 /**
