@@ -4,7 +4,7 @@ import db from '../services/database';
 import { productMedia } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
-import { PutObjectCommand, S3ServiceException } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand, S3ServiceException } from '@aws-sdk/client-s3';
 import s3client from '../services/aws';
 import { assert } from '@scalable-ecommerce/common';
 
@@ -62,8 +62,18 @@ export const createMedia = async (req: Request, res: Response) => {
                 await db.insert(productMedia).values(insertData);
                 res.status(201).json({ message: 'Media created successfully' });
             } catch (error) {
-                // TODO: If this fails delete the image that was added to s3.
-                res.status(500).json({ message: 'oopsie' });
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: bucketName,
+                        Key: key,
+                    });
+                    await s3client.send(deleteCommand);
+                    console.log('Successfully deleted failed insert');
+                } catch (s3Error) {
+                    console.error('Failed to delete image');
+                }
+
+                res.status(500).json({ message: 'Failed to create media record' });
                 console.error(error);
             }
         } else {
