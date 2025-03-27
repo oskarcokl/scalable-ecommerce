@@ -14,17 +14,19 @@ export const getAllMedia = async (req: Request, res: Response) => {
     res.json(await db.select().from(productMedia));
 };
 
-export const getMediaById = async (req: Request, res: Response) => {
-    const mediaId = parseInt(req.params.id);
+export const getMediaByProductId = async (req: Request, res: Response) => {
+    const productId = parseInt(req.params.productId);
 
     const result = await db
         .select()
         .from(productMedia)
-        .where(eq(productMedia.productMediaId, mediaId));
+        .where(eq(productMedia.productId, productId));
 
     if (result.length === 0) {
-        res.status(404).json({ message: `No media found with provided ID: ${mediaId}` });
+        res.status(404).json({ message: `No media found with provided ID: ${productId}` });
     }
+
+    res.status(200).json(result);
 };
 
 const bucketName = 'ecommerce-platform-public-bucket';
