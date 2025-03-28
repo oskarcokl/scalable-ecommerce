@@ -14,6 +14,9 @@ const productInsertSchema = createInsertSchema(products);
 const productUpdateSchema = createUpdateSchema(products);
 
 export const getAllProducts = async (req: Request, res: Response) => {
+    const categoryId = req.query.category ? parseInt(req.query.category as string) : null;
+
+    const productQuery = db.select().from(products);
     res.json(await db.select().from(products));
 };
 

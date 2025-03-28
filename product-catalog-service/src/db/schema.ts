@@ -1,5 +1,14 @@
 import { relations } from 'drizzle-orm';
-import { integer, pgTable, varchar, doublePrecision, pgEnum, serial } from 'drizzle-orm/pg-core';
+import {
+    integer,
+    pgTable,
+    varchar,
+    doublePrecision,
+    pgEnum,
+    serial,
+    pgView,
+} from 'drizzle-orm/pg-core';
+import { sql, eq } from 'drizzle-orm';
 
 /**
  * I'm a bit lost as to what kind of information I need about products so I'm
@@ -93,3 +102,40 @@ const generateSKU = () => {
 
     return `${letters}${numbers}`;
 };
+
+export const productView = pgView('product_view').as((qb) =>
+    qb
+        .select({
+            productId: products.productId,
+            name: products.name,
+            description: products.description,
+            categoryId: products.categoryId,
+            categoryName: categories.categoryName,
+            parentCategoryId: categories.parentCategoryId,
+            // Variant fields (individual rows)
+            variantSku: productVariants.SKU,
+            variantColor: productVariants.color,
+            variantSize: productVariants.size,
+            variantPrice: productVariants.price,
+            variantSex: productVariants.sex,
+            // Just the first media URL
+            mediaUrl: sql`(array_agg(${productMedia.link}))[1]`.as('mediaUrl'),
+        })
+        .from(products)
+        .leftJoin(categories, eq(products.categoryId, categories.categoryId))
+        .leftJoin(productVariants, eq(products.productId, productVariants.productId))
+        .leftJoin(productMedia, eq(products.productId, productMedia.productId))
+        .groupBy(
+            products.productId,
+            products.name,
+            products.description,
+            products.categoryId,
+            categories.categoryName,
+            categories.parentCategoryId,
+            productVariants.SKU,
+            productVariants.color,
+            productVariants.size,
+            productVariants.price,
+            productVariants.sex
+        )
+);
