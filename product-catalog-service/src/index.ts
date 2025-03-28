@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import routes from './routes';
+import { errorHandler } from './middleware/error.middleware';
 
 // Maybe the server should be a service? Or be inside the routes directory
 const app = express();
@@ -13,6 +14,8 @@ dotenv.config({
 });
 
 app.use('/api', routes);
+
+app.use(errorHandler);
 
 // NOTE: When it comes to static files I think that the product-catalog-service
 // should also take care of storing and serving them. This will mean that the

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 import db from '../services/database';
 import { productMedia } from '../db/schema';
@@ -7,6 +7,11 @@ import { createInsertSchema } from 'drizzle-zod';
 import { DeleteObjectCommand, PutObjectCommand, S3ServiceException } from '@aws-sdk/client-s3';
 import s3client from '../services/aws';
 import { assert } from '@scalable-ecommerce/common';
+import {
+    BadRequestError,
+    InternalServerError,
+    NotFoundError,
+} from '../middleware/error.middleware';
 
 const productMediaInsertSchema = createInsertSchema(productMedia);
 
@@ -14,85 +19,78 @@ export const getAllMedia = async (req: Request, res: Response) => {
     res.json(await db.select().from(productMedia));
 };
 
-export const getMediaByProductId = async (req: Request, res: Response) => {
+export const getMediaByProductId = async (req: Request, res: Response, next: NextFunction) => {
     const productId = parseInt(req.params.productId);
-
     const result = await db
         .select()
         .from(productMedia)
         .where(eq(productMedia.productId, productId));
 
     if (result.length === 0) {
-        res.status(404).json({ message: `No media found with provided ID: ${productId}` });
+        return next(new NotFoundError(`No media found with provided ID: ${productId}`));
     }
 
-    res.status(200).json(result);
+    res.json(result);
 };
 
 const bucketName = 'ecommerce-platform-public-bucket';
 const region = 'eu-north-1';
-export const createMedia = async (req: Request, res: Response) => {
-    assert(req.params.productId, 'Product id must be provided');
-    const productId = parseInt(req.params.productId);
-
-    // Check if file
-    if (!req.file) {
-        res.status(400).json({
-            message: 'File type not supported. Supported file types: jpg|jpeg|png|gif',
-        });
-        // Early return because of error
-        return;
-    }
-
-    const key = generateRandomKey();
-    const command = new PutObjectCommand({
-        Bucket: bucketName,
-        Key: key,
-        Body: req.file.buffer,
-        ContentType: 'image/jpeg',
-        ContentDisposition: 'inline',
-    });
-
+export const createMedia = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        assert(req.params.productId, 'Product id must be provided');
+        const productId = parseInt(req.params.productId);
+
+        if (!req.file) {
+            return next(
+                new BadRequestError(
+                    'File type not supported. Supported file types: jpg|jpeg|png|gif'
+                )
+            );
+        }
+
+        const key = generateRandomKey();
+        const command = new PutObjectCommand({
+            Bucket: bucketName,
+            Key: key,
+            Body: req.file.buffer,
+            ContentType: 'image/jpeg',
+            ContentDisposition: 'inline',
+        });
+
         const response = await s3client.send(command);
-        if (response.$metadata.httpStatusCode === 200) {
-            // If upload successful create a DB entry.
-            const imageUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
-            const insertData = productMediaInsertSchema.parse({ productId, link: imageUrl });
+        if (response.$metadata.httpStatusCode !== 200) {
+            return next(new InternalServerError('Unexpected response from S3'));
+        }
 
+        // If upload successful create a DB entry
+        const imageUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
+        const insertData = productMediaInsertSchema.parse({ productId, link: imageUrl });
+
+        try {
+            await db.insert(productMedia).values(insertData);
+            res.status(201).json({ message: 'Media created successfully' });
+        } catch (error) {
+            // Clean up S3 file if DB insert fails
             try {
-                await db.insert(productMedia).values(insertData);
-                res.status(201).json({ message: 'Media created successfully' });
-            } catch (error) {
-                try {
-                    const deleteCommand = new DeleteObjectCommand({
-                        Bucket: bucketName,
-                        Key: key,
-                    });
-                    await s3client.send(deleteCommand);
-                    console.log('Successfully deleted failed insert');
-                } catch (s3Error) {
-                    console.error('Failed to delete image');
-                }
-
-                res.status(500).json({ message: 'Failed to create media record' });
-                console.error(error);
+                const deleteCommand = new DeleteObjectCommand({
+                    Bucket: bucketName,
+                    Key: key,
+                });
+                await s3client.send(deleteCommand);
+                console.log('Successfully deleted failed insert');
+            } catch (s3Error) {
+                console.error('Failed to delete image');
             }
-        } else {
-            console.error('Unexpected S3 response:', response);
-            res.status(500).json({ message: 'Unexpected response from S3' });
+            return next(new InternalServerError('Failed to create media record'));
         }
     } catch (error) {
-        if (error instanceof S3ServiceException && error.name === 'EntityTooLarge') {
-            console.error('Uploaded file is too large');
-            res.status(400).json({ message: 'The file you are trying to upload is too large' });
-        } else if (error instanceof S3ServiceException) {
-            console.error('Error from s3 while uploading image', error);
-            res.status(500).json({ message: 'Error from s3 while uploading image' });
-        } else {
-            console.error('Unexpected error:', error);
-            res.status(500).json({ message: 'Internal server error' });
+        if (error instanceof S3ServiceException) {
+            if (error.name === 'EntityTooLarge') {
+                return next(new BadRequestError('The file you are trying to upload is too large'));
+            }
+            return next(new InternalServerError('Error from S3 while uploading image'));
         }
+        return next(new InternalServerError('Internal server error'));
     }
 };
 
