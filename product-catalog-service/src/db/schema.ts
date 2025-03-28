@@ -103,39 +103,37 @@ const generateSKU = () => {
     return `${letters}${numbers}`;
 };
 
-export const productView = pgView('product_view').as((qb) =>
-    qb
-        .select({
-            productId: products.productId,
-            name: products.name,
-            description: products.description,
-            categoryId: products.categoryId,
-            categoryName: categories.categoryName,
-            parentCategoryId: categories.parentCategoryId,
-            // Variant fields (individual rows)
-            variantSku: productVariants.SKU,
-            variantColor: productVariants.color,
-            variantSize: productVariants.size,
-            variantPrice: productVariants.price,
-            variantSex: productVariants.sex,
-            // Just the first media URL
-            mediaUrl: sql`(array_agg(${productMedia.link}))[1]`.as('mediaUrl'),
-        })
-        .from(products)
-        .leftJoin(categories, eq(products.categoryId, categories.categoryId))
-        .leftJoin(productVariants, eq(products.productId, productVariants.productId))
-        .leftJoin(productMedia, eq(products.productId, productMedia.productId))
-        .groupBy(
-            products.productId,
-            products.name,
-            products.description,
-            products.categoryId,
-            categories.categoryName,
-            categories.parentCategoryId,
-            productVariants.SKU,
-            productVariants.color,
-            productVariants.size,
-            productVariants.price,
-            productVariants.sex
-        )
-);
+// NOTE: This was fucking painful!!!
+export const productsView = pgView('products_view', {
+    productId: integer('product_id').notNull(),
+    name: varchar('name').notNull(),
+    description: varchar('description').notNull(),
+    categoryId: integer('category_id').notNull(),
+    categoryName: varchar('category_name'),
+    parentCategoryId: integer('parent_category_id'),
+    variantSku: varchar('variant_sku'),
+    variantColor: varchar('variant_color'),
+    variantSize: varchar('variant_size'),
+    variantPrice: doublePrecision('variant_price'),
+    variantSex: sexEnum('variant_sex'),
+    mediaUrl: varchar('mediaUrl'),
+}).as(sql`
+    SELECT
+        p.product_id,
+        p.name,
+        p.description,
+        p.category_id,
+        c.category_name,
+        c.parent_category_id,
+        pv.sku as variant_sku,
+        pv.color as variant_color,
+        pv.size as variant_size,
+        pv.price as variant_price,
+        pv.sex as variant_sex,
+        (SELECT link FROM product_media WHERE product_id = p.product_id LIMIT 1) as "mediaUrl"
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.category_id
+    LEFT JOIN product_variants pv ON p.product_id = pv.product_id
+`); // NOTE: Have to use raw SQL otherwise the type system complains. And I have
+// to explicitly define the shape of the view otherwise drizzle cant figure
+// out the column types and we cant query the view properly.
