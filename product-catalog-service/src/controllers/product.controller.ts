@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import db from '../services/database';
 import { categories, products, productsView } from '../db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { AnyColumn, asc, desc, eq, sql } from 'drizzle-orm';
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import {
     BadRequestError,
@@ -35,8 +35,45 @@ const getCategoryHierarchy = async (categoryId: number, categoryHierarchy: any[]
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const categoryId = req.query.category ? parseInt(req.query.category as string) : null;
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+        const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
-        const query = db.select().from(productsView);
+        const sortDirParam = req.query.sortDir as string | undefined;
+        if (sortDirParam && !['asc', 'desc'].includes(sortDirParam)) {
+            return next(new BadRequestError('sortDir must be either "asc" or "desc"'));
+        }
+        const sortDir = sortDirParam === 'desc' ? desc : asc;
+
+        const validColumns = [
+            'productId',
+            'name',
+            'description',
+            'categoryId',
+            'categoryName',
+            'parentCategoryId',
+            'variantSku',
+            'variantColor',
+            'variantSize',
+            'variantPrice',
+            'variantSex',
+            'mediaUrl',
+        ] as const;
+
+        const sortColumnParam = req.query.sortColumn as (typeof validColumns)[number] | undefined;
+        if (sortColumnParam && !validColumns.includes(sortColumnParam)) {
+            return next(
+                new BadRequestError(`sortColumn must be one of : ${validColumns.join(', ')}`)
+            );
+        }
+        // NOTE: Not sure about the type asigment here?
+        const sortColumn = productsView[sortColumnParam ?? 'name'] as AnyColumn;
+
+        const query = db
+            .selectDistinct()
+            .from(productsView)
+            .limit(limit)
+            .offset(offset * limit)
+            .orderBy(sortDir(sortColumn));
         const whereClauses: any[] = [];
 
         if (categoryId) {
