@@ -8,7 +8,7 @@ import {
     InternalServerError,
     NotFoundError,
 } from '../middleware/error.middleware';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 
 const productInsertSchema = createInsertSchema(products);
 const productUpdateSchema = createUpdateSchema(products);
@@ -32,41 +32,66 @@ const getCategoryHierarchy = async (categoryId: number, categoryHierarchy: any[]
     return categoryHierarchy;
 };
 
+const validColumns = ['name', 'price'] as const;
+
+const sortableColumns = {
+    name: productsView.name,
+    price: productsView.variantPrice,
+};
+
+const sortDirections = {
+    asc,
+    desc,
+} as const;
+
+const querySchema = z.object({
+    category: z.coerce
+        .number({
+            invalid_type_error: 'category must be a number',
+        })
+        .int()
+        .positive()
+        .optional(),
+    limit: z.coerce
+        .number({
+            invalid_type_error: 'limit must be a number',
+        })
+        .int()
+        .positive()
+        .default(10),
+    offset: z.coerce
+        .number({
+            invalid_type_error: 'offset must be a number',
+        })
+        .int()
+        .nonnegative()
+        .default(0),
+    sortDir: z
+        .enum(['asc', 'desc'], {
+            invalid_type_error: 'sortDir must be either "asc" or "desc"',
+        })
+        .default('asc'),
+    sortColumn: z
+        .enum(validColumns, {
+            invalid_type_error: `sortColumn must be one of the following ${validColumns.join(
+                ', '
+            )}`,
+        })
+        .default('name'),
+});
+
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const categoryId = req.query.category ? parseInt(req.query.category as string) : null;
-        const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-        const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+        const {
+            limit,
+            offset,
+            category: categoryId,
+            sortDir: sortDirParam,
+            sortColumn: sortColumnParam,
+        } = querySchema.parse(req.query);
 
-        const sortDirParam = req.query.sortDir as string | undefined;
-        if (sortDirParam && !['asc', 'desc'].includes(sortDirParam)) {
-            return next(new BadRequestError('sortDir must be either "asc" or "desc"'));
-        }
-        const sortDir = sortDirParam === 'desc' ? desc : asc;
-
-        const validColumns = [
-            'productId',
-            'name',
-            'description',
-            'categoryId',
-            'categoryName',
-            'parentCategoryId',
-            'variantSku',
-            'variantColor',
-            'variantSize',
-            'variantPrice',
-            'variantSex',
-            'mediaUrl',
-        ] as const;
-
-        const sortColumnParam = req.query.sortColumn as (typeof validColumns)[number] | undefined;
-        if (sortColumnParam && !validColumns.includes(sortColumnParam)) {
-            return next(
-                new BadRequestError(`sortColumn must be one of : ${validColumns.join(', ')}`)
-            );
-        }
-        // NOTE: Not sure about the type asigment here?
-        const sortColumn = productsView[sortColumnParam ?? 'name'] as AnyColumn;
+        const sortDir = sortDirections[sortDirParam];
+        const sortColumn = sortableColumns[sortColumnParam];
 
         const query = db
             .selectDistinct()
