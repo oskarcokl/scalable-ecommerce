@@ -78,6 +78,11 @@ const querySchema = z.object({
             )}`,
         })
         .default('name'),
+    size: z.string().optional(),
+    color: z.string().optional(),
+    minPrice: z.coerce.number().min(0).optional(),
+    maxPrice: z.coerce.number().min(0).optional(),
+    sex: z.enum(['male', 'female', 'unisex']).optional(),
 });
 
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
@@ -88,6 +93,11 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
             category: categoryId,
             sortDir: sortDirParam,
             sortColumn: sortColumnParam,
+            size,
+            color,
+            minPrice,
+            maxPrice,
+            sex,
         } = querySchema.parse(req.query);
 
         const sortDir = sortDirections[sortDirParam];
@@ -103,6 +113,22 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
 
         if (categoryId) {
             whereClauses.push(eq(productsView.categoryId, categoryId));
+        }
+
+        if (size) {
+            whereClauses.push(eq(productsView.variantSize, size));
+        }
+        if (color) {
+            whereClauses.push(eq(productsView.variantColor, color));
+        }
+        if (sex) {
+            whereClauses.push(eq(productsView.variantSex, sex));
+        }
+        if (minPrice !== undefined) {
+            whereClauses.push(sql`${productsView.variantPrice} >= ${minPrice}`);
+        }
+        if (maxPrice !== undefined) {
+            whereClauses.push(sql`${productsView.variantPrice} <= ${maxPrice}`);
         }
 
         if (whereClauses.length > 0) {
